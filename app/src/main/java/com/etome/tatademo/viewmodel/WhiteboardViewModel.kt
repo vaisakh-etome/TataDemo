@@ -40,12 +40,10 @@ class WhiteboardViewModel : ViewModel() {
     private val _strokeWidth = MutableLiveData(6f)
     val strokeWidth: LiveData<Float> = _strokeWidth
 
-
     val state = WhiteboardState()
 
     var strokeColor: String = "#000000"
     var eraserWidth: Float = 40f
-
 
     private val _textSize = MutableLiveData(40f)
     val textSize: LiveData<Float> = _textSize
@@ -63,7 +61,6 @@ class WhiteboardViewModel : ViewModel() {
         selectedShape.value = null
     }
 
-
     fun setColor(hex: String) {
         _color.value = hex
     }
@@ -78,9 +75,7 @@ class WhiteboardViewModel : ViewModel() {
 
     fun selectShape(type: ShapeType) {
         selectedShape.value = type
-//        selectPen()
         _tool.value = ToolType.PEN // use pen to draw shape
-
     }
 
     fun addShape(shape: Shape) {
@@ -99,28 +94,22 @@ class WhiteboardViewModel : ViewModel() {
         _tool.value = ToolType.TEXT
     }
 
-
     fun saveWhiteboard(context: Context): File {
-
         val gson = Gson()
         val dto = toDto()
         val json = gson.toJson(dto)
 
-//        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val timeStamp = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
-
         val fileName = "whiteboard_$timeStamp.json"
 
         val file = File(context.filesDir, fileName)
         file.writeText(json)
 
-        Log.i("",json)
-
+        Log.i("WhiteboardSave", json)
         return file
     }
 
     fun loadFromJson(json: String) {
-
         val gson = Gson()
         val dto = gson.fromJson(json, WhiteboardDto::class.java)
 
@@ -129,13 +118,14 @@ class WhiteboardViewModel : ViewModel() {
         state.shapes.clear()
         state.texts.clear()
 
-        // Restore strokes
+        // Restore strokes, including eraser info
         dto.strokes.forEach {
             state.strokes.add(
                 Stroke(
                     points = it.points.map { p -> Pair(p[0], p[1]) }.toMutableList(),
                     color = it.color,
-                    width = it.width
+                    width = it.width,
+                    isEraser = it.isEraser // ✅ restore eraser
                 )
             )
         }
@@ -170,5 +160,4 @@ class WhiteboardViewModel : ViewModel() {
             )
         }
     }
-
 }

@@ -1,14 +1,20 @@
 package com.etome.tatademo
 
 import android.content.pm.ActivityInfo
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
-import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.SeekBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import com.etome.tatademo.model.ShapeType
 import com.etome.tatademo.model.ToolType
 import com.etome.tatademo.view.WhiteboardView
@@ -17,12 +23,47 @@ import com.etome.tatademo.viewmodel.WhiteboardViewModel
 class MainActivity : AppCompatActivity() {
 
     private val viewModel: WhiteboardViewModel by viewModels()
+    private lateinit var player: ExoPlayer
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         setContentView(R.layout.activity_main)
+        val playPauseBtn = findViewById<ImageView>(R.id.btnPlayPause)
+
+
+        val playerView = findViewById<PlayerView>(R.id.playerView)
+        player = ExoPlayer.Builder(this).build()
+        playerView.player = player
+
+        playerView.useController = false
+
+        val uri = Uri.parse("android.resource://${packageName}/${R.raw.sample}")
+        player.setMediaItem(MediaItem.fromUri(uri))
+        player.prepare()
+        player.play()
+
+
+        playPauseBtn.setOnClickListener {
+            if (player.isPlaying) {
+                player.pause()
+                playPauseBtn.setImageResource(R.drawable.play)
+            } else {
+                player.play()
+                playPauseBtn.setImageResource(R.drawable.pause)
+            }
+        }
+
+        player.addListener(object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                playPauseBtn.setImageResource(
+                    if (isPlaying) R.drawable.pause else R.drawable.play
+                )
+            }
+        })
 
         val whiteboardView = findViewById<WhiteboardView>(R.id.whiteboardView)
         whiteboardView.viewModel = viewModel
@@ -37,6 +78,40 @@ class MainActivity : AppCompatActivity() {
             penBtn.alpha = if (tool == ToolType.PEN) 1f else 0.5f
             eraserBtn.alpha = if (tool == ToolType.ERASER) 1f else 0.5f
         }
+
+        val progressBar = findViewById<SeekBar>(R.id.videoProgress)
+        val timeText = findViewById<TextView>(R.id.tvTime)
+        val handler = android.os.Handler(mainLooper)
+
+        val updateProgress = object : Runnable {
+            override fun run() {
+                if (player.duration > 0) {
+                    val progress =
+                        (player.currentPosition * 100 / player.duration).toInt()
+                    progressBar.progress = progress
+
+                    timeText.text =
+                        "${formatTime(player.currentPosition)} / ${formatTime(player.duration)}"
+                }
+                handler.postDelayed(this, 500)
+            }
+        }
+
+        handler.post(updateProgress)
+
+
+        progressBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser && player.duration > 0) {
+                    val seekPosition = player.duration * progress / 100
+                    player.seekTo(seekPosition)
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
 
         // ---- Colors ----
         val colorViews = mapOf(
@@ -86,7 +161,8 @@ class MainActivity : AppCompatActivity() {
             viewModel.selectShape(ShapeType.POLYGON)
         }
         findViewById<ImageView>(R.id.btnText).setOnClickListener {
-            Toast.makeText(this, "Double-tap on the whiteboard to add text", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Double-tap on the whiteboard to add text", Toast.LENGTH_LONG)
+                .show()
             viewModel.selectTextTool()
         }
 
@@ -129,5 +205,17 @@ class MainActivity : AppCompatActivity() {
         whiteboardView.invalidate()
 
         Toast.makeText(this, "Loaded: ${latestFile.name}", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun formatTime(ms: Long): String {
+        val totalSeconds = ms / 1000
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return String.format("%02d:%02d", minutes, seconds)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        player.release()
     }
 }

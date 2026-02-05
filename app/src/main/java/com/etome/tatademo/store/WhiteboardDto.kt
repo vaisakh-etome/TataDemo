@@ -9,7 +9,8 @@ data class WhiteboardDto(
 data class StrokeDto(
     val points: List<List<Float>>,
     val color: String,
-    val width: Float
+    val width: Float,
+    val isEraser: Boolean
 )
 
 data class ShapeDto(

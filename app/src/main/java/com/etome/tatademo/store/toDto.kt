@@ -8,7 +8,8 @@ fun WhiteboardViewModel.toDto(): WhiteboardDto {
             StrokeDto(
                 points = it.points.map { p -> listOf(p.first, p.second) },
                 color = it.color,
-                width = it.width
+                width = it.width,
+                isEraser = it.isEraser
             )
         },
         shapes = state.shapes.map {
