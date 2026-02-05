@@ -4,6 +4,7 @@ This is an Android application built using **Kotlin**
 
 ## 🚀 Features
 - MVVM architecture
+- LiveData
 - Clean and simple design
 
 ## 🛠 Tech Stack
